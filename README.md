@@ -116,8 +116,8 @@ Backtested against completed orders, not asserted.
 Requires Docker, Python 3.10 to 3.12, and Java 17 for the Spark jobs.
 
 ```bash
-git clone https://github.com/Mo3203/food-delivery-platform.git
-cd food-delivery-platform
+git clone https://github.com/Mo3203/ai-ready-data-pipeline.git
+cd ai-ready-data-pipeline
 
 /Library/Frameworks/Python.framework/Versions/3.12/bin/python3.12 -m venv venv
 source venv/bin/activate          # Windows: venv\Scripts\activate
