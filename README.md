@@ -1,4 +1,4 @@
-# Real-Time Food Delivery Data Platform
+# ai-ready-data-pipeline
 
 An event-driven data platform for a food delivery operation: a streaming
 pipeline, two storage engines chosen for different access patterns, a
