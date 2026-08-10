@@ -1,0 +1,7 @@
+confluent-kafka>=2.5,<3
+faker>=30,<38
+psycopg[binary]>=3.2.13,<3.3
+redis>=5,<7
+
+# Required only for the Spark streaming jobs. Needs a Java 17 runtime.
+pyspark>=3.5.4

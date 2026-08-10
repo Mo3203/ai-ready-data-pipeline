@@ -1,0 +1,466 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Operations Board</title>
+<style>
+:root{
+  /* Brand, sampled from the app splash screen */
+  --brand:#F08F34; --brand-deep:#D97620; --brand-tint:#FDF2E6; --brand-line:#F7D9B8;
+  --ground:#FAF6F1; --panel:#FFFFFF; --line:#EBE0D4; --line-soft:#F4ECE3;
+  --ink:#2B2019; --ink-dim:#7A6A5C; --ink-faint:#AC9C8D;
+  --transit:#3E7CA6; --done:#2E9469; --alert:#C9503F;
+  --mono:ui-monospace,SFMono-Regular,"SF Mono",Menlo,Consolas,monospace;
+  --sans:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--ground);color:var(--ink);font-family:var(--sans);
+  font-feature-settings:"tnum" 1;-webkit-font-smoothing:antialiased}
+
+/* Brand bar echoes the app splash: solid orange, white mark */
+.bar{background:var(--brand);padding:14px 30px;display:flex;align-items:center;
+  justify-content:space-between;gap:16px;flex-wrap:wrap}
+.mark{display:flex;align-items:center;gap:13px}
+/* Drop a logo file in here if you have one: <img src="logo.png" height="26"> */
+.mark .name{color:#fff;font-size:17px;font-weight:600;letter-spacing:.19em;
+  text-transform:uppercase}
+.mark .chev{display:flex;gap:3px}
+.mark .chev i{width:5px;height:12px;background:rgba(255,255,255,.85);
+  transform:skewX(-18deg);border-radius:1px}
+.bar .right{display:flex;align-items:center;gap:18px}
+.bar .live{color:#fff;font-size:11.5px;letter-spacing:.1em;text-transform:uppercase;
+  opacity:.92}
+.dot{display:inline-block;width:7px;height:7px;border-radius:50%;background:#fff;
+  margin-right:8px;animation:beat 2s ease-in-out infinite;vertical-align:middle}
+@keyframes beat{0%,100%{opacity:1}50%{opacity:.35}}
+.bar .clock{color:#fff;font-family:var(--mono);font-size:13px;opacity:.95}
+
+nav{display:flex;gap:0;padding:0 30px;background:var(--panel);
+  border-bottom:1px solid var(--line)}
+nav button{background:none;border:none;border-bottom:3px solid transparent;
+  color:var(--ink-faint);font-family:var(--sans);font-size:12px;letter-spacing:.13em;
+  text-transform:uppercase;padding:15px 22px;cursor:pointer;transition:color .18s}
+nav button:hover{color:var(--ink-dim)}
+nav button.on{color:var(--brand-deep);border-bottom-color:var(--brand)}
+nav button:focus-visible{outline:2px solid var(--transit);outline-offset:-3px}
+
+main{padding:24px 30px 60px}
+.view{display:none}.view.on{display:block}
+.grid{display:grid;gap:14px;margin-bottom:14px}
+.g4{grid-template-columns:repeat(4,1fr)}
+.g3{grid-template-columns:repeat(3,1fr)}
+.g2{grid-template-columns:2fr 1fr}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:6px;
+  padding:18px 20px;box-shadow:0 1px 2px rgba(43,32,25,.03)}
+.card.hero{padding:22px 24px}
+.card.brandcard{background:var(--brand-tint);border-color:var(--brand-line)}
+.lbl{font-size:10.5px;letter-spacing:.15em;text-transform:uppercase;
+  color:var(--ink-faint);margin-bottom:12px}
+.fig{font-family:var(--mono);font-size:44px;font-weight:500;line-height:1;
+  letter-spacing:-.02em}
+.fig.sm{font-size:27px}
+.unit{font-size:14px;color:var(--ink-dim);margin-left:6px;font-family:var(--sans)}
+.sub{font-size:11.5px;color:var(--ink-faint);margin-top:10px;line-height:1.55}
+.brandink{color:var(--brand-deep)}.doneink{color:var(--done)}.transitink{color:var(--transit)}
+
+/* Signature: the ticket rail */
+.rail{display:flex;flex-direction:column;gap:2px;margin-top:4px}
+.ticket{display:grid;grid-template-columns:78px 1fr 100px 66px;align-items:center;
+  gap:12px;padding:10px 13px;background:var(--ground);border-left:3px solid var(--line);
+  border-radius:3px;font-family:var(--mono);font-size:12px;animation:slide .35s ease-out}
+@keyframes slide{from{opacity:0;transform:translateX(-6px)}to{opacity:1;transform:none}}
+.ticket.placed{border-left-color:var(--ink-faint)}
+.ticket.preparing{border-left-color:var(--brand);background:var(--brand-tint)}
+.ticket.ready{border-left-color:var(--brand-deep)}
+.ticket.in_transit{border-left-color:var(--transit)}
+.ticket.delivered{border-left-color:var(--done)}
+.ticket .id{color:var(--ink-faint)}
+.ticket .st{font-size:10px;letter-spacing:.09em;text-transform:uppercase;
+  color:var(--ink-dim)}
+.ticket .amt{text-align:right;color:var(--ink-dim)}
+
+.flow{display:flex;gap:3px;margin-top:14px}
+.flow div{flex:1;text-align:center;padding:12px 4px;background:var(--ground);
+  border-radius:4px;border-top:3px solid var(--line)}
+.flow div:nth-child(2){border-top-color:var(--brand)}
+.flow div:nth-child(3){border-top-color:var(--brand-deep)}
+.flow div:nth-child(4){border-top-color:var(--transit)}
+.flow div:nth-child(5){border-top-color:var(--done)}
+.flow .n{font-family:var(--mono);font-size:19px}
+.flow .k{font-size:9.5px;letter-spacing:.08em;text-transform:uppercase;
+  color:var(--ink-faint);margin-top:5px}
+
+table{width:100%;border-collapse:collapse;font-family:var(--mono);font-size:12px}
+th{text-align:left;font-family:var(--sans);font-size:10px;letter-spacing:.13em;
+  text-transform:uppercase;color:var(--ink-faint);font-weight:600;
+  padding:0 10px 9px 0;border-bottom:1px solid var(--line)}
+td{padding:9px 10px 9px 0;border-bottom:1px solid var(--line-soft);color:var(--ink-dim)}
+td.k{color:var(--ink)}
+.bar-meter{height:5px;background:var(--ground);border-radius:3px;overflow:hidden;
+  margin-top:7px;border:1px solid var(--line-soft)}
+.bar-meter i{display:block;height:100%;background:var(--done);transition:width .5s}
+.bar-meter i.warn{background:var(--brand)}
+.note{font-size:11.5px;color:var(--ink-faint);line-height:1.65;margin-top:14px;
+  padding-top:14px;border-top:1px solid var(--line-soft)}
+.chain{display:flex;align-items:center;gap:7px;flex-wrap:wrap;font-family:var(--mono);
+  font-size:11.5px;margin-top:6px}
+.chain span{padding:7px 11px;background:var(--ground);border:1px solid var(--line);
+  border-radius:4px;color:var(--ink-dim)}
+.chain b{color:var(--brand-deep);font-weight:600}
+.arrow{color:var(--ink-faint);border:none!important;background:none!important;padding:0!important}
+.empty{color:var(--ink-faint);font-size:12px;padding:14px 0;font-family:var(--sans)}
+@media(max-width:900px){.g4,.g3,.g2{grid-template-columns:1fr 1fr}main{padding:18px}
+  .bar,nav{padding-left:18px;padding-right:18px}}
+@media(max-width:560px){.g4,.g3,.g2{grid-template-columns:1fr}}
+@media(prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+</style>
+</head>
+<body>
+
+<div class="bar">
+  <div class="mark">
+    <span class="chev"><i></i><i></i><i></i></span>
+    <span class="name">Operations Board</span>
+  </div>
+  <div class="right">
+    <span class="live"><span class="dot"></span>Live</span>
+    <span class="clock" id="clock"></span>
+  </div>
+</div>
+
+<nav>
+  <button class="on" data-v="ops">Operations</button>
+  <button data-v="pipe">Pipeline</button>
+  <button data-v="ai">Intelligence</button>
+</nav>
+
+<main>
+
+<section class="view on" id="ops">
+  <div class="grid g4">
+    <div class="card hero brandcard">
+      <div class="lbl">Cost per order</div>
+      <div class="fig brandink"><span id="cpo">—</span><span class="unit">SAR</span></div>
+      <div class="sub" id="cposub">Driver salary 3,000 SAR ÷ orders completed per driver per month</div>
+    </div>
+    <div class="card hero">
+      <div class="lbl">Orders per driver / month</div>
+      <div class="fig"><span id="opd">—</span></div>
+      <div class="bar-meter"><i id="opdbar" style="width:0%"></i></div>
+      <div class="sub">Projected from current rate · target 500–600</div>
+    </div>
+    <div class="card hero">
+      <div class="lbl">Delivered</div>
+      <div class="fig doneink" id="dlv">—</div>
+      <div class="sub"><span id="act">0</span> currently in progress</div>
+    </div>
+    <div class="card hero">
+      <div class="lbl">Revenue</div>
+      <div class="fig sm"><span id="rev">—</span><span class="unit">SAR</span></div>
+      <div class="sub"><span id="drv">0</span> drivers active</div>
+    </div>
+  </div>
+
+  <div class="grid g3">
+    <div class="card">
+      <div class="lbl">Live order rail</div>
+      <div class="rail" id="rail"><div class="empty">waiting for orders…</div></div>
+    </div>
+    <div class="card">
+      <div class="lbl">Cost of a single delivery against a batched one</div>
+      <table>
+        <thead><tr><th></th><th>Single</th><th>Batched</th></tr></thead>
+        <tbody>
+          <tr><td class="k">Orders delivered</td><td id="so">&mdash;</td><td id="bo">&mdash;</td></tr>
+          <tr><td class="k">Driver trips</td><td id="st">&mdash;</td><td id="bt">&mdash;</td></tr>
+          <tr><td class="k">Driver cycle per trip</td><td id="cyS">&mdash;</td><td id="cyB">&mdash;</td></tr>
+          <tr><td class="k">Driver time per order</td><td id="ms">&mdash;</td><td id="mb">&mdash;</td></tr>
+          <tr><td class="k">Delivery cost per order</td>
+              <td id="cs" class="brandink">&mdash;</td>
+              <td id="cb" class="doneink">&mdash;</td></tr>
+          <tr><td class="k">Revenue</td><td id="sr">&mdash;</td><td id="br">&mdash;</td></tr>
+        </tbody>
+      </table>
+
+      <div class="flow" style="margin-top:16px">
+        <div style="border-top-color:var(--brand)"><div class="n" id="bshare">&mdash;</div>
+          <div class="k">Batched share</div></div>
+        <div style="border-top-color:var(--done)"><div class="n" id="spb">&mdash;</div>
+          <div class="k">Cheaper per order</div></div>
+        <div style="border-top-color:var(--done)"><div class="n" id="tsaved">&mdash;</div>
+          <div class="k">Trips saved</div></div>
+      </div>
+
+      <div class="lbl" style="margin-top:20px">If the batched share grew</div>
+      <table>
+        <tbody>
+          <tr><td class="k">Orders per driver today</td><td id="opdA">&mdash;</td></tr>
+          <tr><td class="k">Orders per driver at 40% batched</td><td id="opdB" class="doneink">&mdash;</td></tr>
+          <tr><td class="k">Blended cost per order today</td><td id="cn" class="brandink">&mdash;</td></tr>
+          <tr><td class="k">Blended cost per order at 40% batched</td><td id="c40" class="doneink">&mdash;</td></tr>
+        </tbody>
+      </table>
+      <div class="note">A driver cycle covers the whole job: travelling to the
+        restaurant, waiting for the food, delivering, and repositioning for the next
+        order. Two batched orders share one cycle plus a short second drop, so each
+        carries a little over half. Because driver capacity is the limit, batching
+        raises the number of orders one salaried driver can complete, and that is
+        what lowers the cost of each. How many orders can be paired depends on order
+        density and on predicting when each kitchen will finish.</div>
+    </div>
+    <div class="card">
+      <div class="lbl">Where orders are now</div>
+      <div class="flow" id="flow"></div>
+      <div class="lbl" style="margin-top:22px">Average intervals</div>
+      <table>
+        <tr><td class="k">Kitchen preparation</td><td id="i1">—</td></tr>
+        <tr><td class="k">Driver wait at pickup</td><td id="i2">—</td></tr>
+        <tr><td class="k">Placed to delivered</td><td id="i3">—</td></tr>
+      </table>
+      <div class="note">These intervals are only measurable because each state
+        change is captured as its own event with its own timestamp.</div>
+    </div>
+  </div>
+</section>
+
+<section class="view" id="pipe">
+  <div class="grid g3">
+    <div class="card">
+      <div class="lbl">Event log</div>
+      <div class="fig sm" id="ptopics">—</div>
+      <div class="sub" id="pbroker">—</div>
+    </div>
+    <div class="card">
+      <div class="lbl">PostgreSQL · order history</div>
+      <div class="fig sm" id="prows">—</div>
+      <div class="sub"><span id="pcomplete">0</span> with a complete lifecycle</div>
+    </div>
+    <div class="card">
+      <div class="lbl">Redis · live driver state</div>
+      <div class="fig sm" id="pkeys">—</div>
+      <div class="sub">One key per driver, overwritten on every ping</div>
+    </div>
+  </div>
+  <div class="grid g2">
+    <div class="card">
+      <div class="lbl">One order, every timestamp recorded</div>
+      <div class="chain" id="chain"><span class="empty">waiting…</span></div>
+      <div class="note">The row is built up over time by five separate events.
+        Writes are idempotent, so a consumer restart replays without duplicating.
+        Both stores are derived from this one stream — neither is the source of truth.</div>
+    </div>
+    <div class="card">
+      <div class="lbl">Current driver positions</div>
+      <table><thead><tr><th>Driver</th><th>Lat</th><th>Lng</th><th>Seen</th></tr></thead>
+      <tbody id="pdrivers"></tbody></table>
+    </div>
+  </div>
+</section>
+
+<section class="view" id="ai">
+  <div class="grid g4">
+    <div class="card">
+      <div class="lbl">Prep predictions learned</div>
+      <div class="fig sm" id="aobs">&mdash;</div>
+      <div class="sub"><span id="arest">0</span> of 5 restaurants modelled</div>
+    </div>
+    <div class="card">
+      <div class="lbl">Prediction error</div>
+      <div class="fig sm"><span id="amae">&mdash;</span></div>
+      <div class="sub">Average miss against actual preparation time</div>
+    </div>
+    <div class="card">
+      <div class="lbl">Within promised window</div>
+      <div class="fig sm doneink" id="awithin">&mdash;</div>
+      <div class="sub">Share of predictions inside the 5 minute window</div>
+    </div>
+    <div class="card brandcard">
+      <div class="lbl">Batchable now</div>
+      <div class="fig sm brandink" id="apairs">&mdash;</div>
+      <div class="sub">Pairs that can share one driver trip</div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="lbl">Preparation prediction, ETA and batchability &middot; orders in the kitchen</div>
+    <table><thead><tr><th>Order</th><th>Restaurant</th><th>Cooking</th>
+      <th>Ready in</th><th>Confidence</th><th>Customer ETA</th><th>Batchable</th></tr></thead>
+    <tbody id="apred"></tbody></table>
+    <div class="note">One model drives all three columns. The predicted ready time is
+      learned from captured preparation intervals; the customer ETA adds the handover
+      delay and the travel time for that zone, both also learned from history;
+      batchability is two orders whose predicted ready times fall close enough together
+      for one trip. Ranges run median to 90th percentile, because a delivery promise
+      without a confidence level cannot be planned against. Horizons are stated in
+      real-world minutes and scaled to the simulated clock.</div>
+  </div>
+
+  <div class="grid g2">
+    <div class="card">
+      <div class="lbl">Candidate batches &middot; two orders, one trip</div>
+      <table><thead><tr><th>Order A</th><th>Order B</th><th>Restaurant</th>
+        <th>Zone</th><th>Ready gap</th><th>Confidence</th></tr></thead>
+      <tbody id="apairtbl"></tbody></table>
+    </div>
+    <div class="card">
+      <div class="lbl">Restaurant predictability</div>
+      <table><thead><tr><th>Restaurant</th><th>Median prep</th><th>Spread</th></tr></thead>
+      <tbody id="aprof"></tbody></table>
+      <div class="note">Low spread means a consistent kitchen, so batching can be
+        aggressive and the ETA promise tightened. High spread means both should stay
+        conservative.</div>
+    </div>
+  </div>
+</section>
+
+</main>
+<script>
+const $=id=>document.getElementById(id);
+const n=(v,d=0)=>v==null?"—":Number(v).toLocaleString(undefined,{minimumFractionDigits:d,maximumFractionDigits:d});
+let TC=45;
+// Simulated seconds converted to the real-world minutes they represent.
+const rw=v=>{
+  if(v==null||v==="") return "\u2014";
+  const m=Number(v)*TC/60;
+  if(m<1) return "<1 min";
+  return Math.round(m)+" min";
+};
+const rwr=(a,b)=>{
+  if(a==null||b==null) return "\u2014";
+  const lo=Math.round(Number(a)*TC/60), hi=Math.round(Number(b)*TC/60);
+  return (lo<1?"<1":lo)+"\u2013"+hi+" min";
+};
+const pct=v=>v==null?"—":Math.round(v*100)+"%";
+let view="ops";
+
+document.querySelectorAll("nav button").forEach(b=>b.onclick=()=>{
+  document.querySelectorAll("nav button").forEach(x=>x.classList.remove("on"));
+  document.querySelectorAll(".view").forEach(x=>x.classList.remove("on"));
+  b.classList.add("on"); $(b.dataset.v).classList.add("on"); view=b.dataset.v; tick();
+});
+
+setInterval(()=>{$("clock").textContent=new Date().toLocaleTimeString();},1000);
+
+const STAGES=[["placed","Placed"],["preparing","Preparing"],["ready","Ready"],
+  ["in_transit","In transit"],["delivered","Delivered"]];
+
+async function ops(){
+  const d=await (await fetch("/api/operations")).json();
+  if(d.error) return;
+  if(d.time_compression) TC=d.time_compression;
+  if(d.warming){
+    $("cpo").textContent="…"; $("opd").textContent="…";
+    $("cposub").textContent="Waiting for the first deliveries to complete";
+    $("opdbar").style.width="0%";
+  }else{
+    $("cpo").textContent=n(d.cost_per_order,2);
+    $("opd").textContent=n(d.projected_month);
+    $("cposub").textContent="Driver salary 3,000 SAR ÷ orders completed per driver per month";
+    $("opdbar").style.width=Math.min(100,(d.projected_month/600)*100)+"%";
+    $("opdbar").className=d.projected_month<500?"warn":"";
+  }
+  $("dlv").textContent=n(d.delivered);
+  $("act").textContent=n(d.active);
+  $("rev").textContent=n(d.revenue);
+  $("drv").textContent=n(d.drivers);
+  $("i1").textContent=rw(d.avg_prep);
+  $("i2").textContent=rw(d.avg_wait);
+  $("i3").textContent=rw(d.avg_total);
+
+  $("so").textContent=n(d.single_orders);
+  $("bo").textContent=n(d.batched_orders);
+  $("st").textContent=n(d.single_orders);
+  $("bt").textContent=n(d.batch_trips);
+  const mins=v=>(v==null||!v)?"\u2014":Math.round(Number(v))+" min";
+  $("cyS").textContent=mins(d.cycle_single);
+  $("cyB").textContent=mins(d.cycle_batched)+" for two";
+  $("ms").textContent=mins(d.minutes_per_single);
+  $("mb").textContent=mins(d.minutes_per_batched);
+  $("opdA").textContent=n(d.projected_month);
+  $("opdB").textContent=n(d.projected_month_at_40);
+  $("cs").textContent=d.cost_single_order?n(d.cost_single_order,2)+" SAR":"\u2014";
+  $("cb").textContent=d.cost_batched_order?n(d.cost_batched_order,2)+" SAR":"\u2014";
+  $("sr").textContent=n(d.single_revenue)+" SAR";
+  $("br").textContent=n(d.batched_revenue)+" SAR";
+  $("bshare").textContent=pct(d.batch_share);
+  $("spb").textContent=d.saving_per_batched?pct(d.saving_per_batched):"\u2014";
+  $("tsaved").textContent=n(d.trips_saved);
+  $("cn").textContent=d.cost_per_order?n(d.cost_per_order,2)+" SAR":"\u2014";
+  $("c40").textContent=d.cost_at_40_share?n(d.cost_at_40_share,2)+" SAR":"\u2014";
+
+  $("flow").innerHTML=STAGES.map(([k,label])=>
+    `<div><div class="n">${d.by_stage[k]||0}</div><div class="k">${label}</div></div>`).join("");
+
+  $("rail").innerHTML=d.rail.length?d.rail.map(o=>
+    `<div class="ticket ${o.status}"><span class="id">${o.order_id}</span>
+     <span>${o.restaurant_id}</span>
+     <span class="st">${o.status.replace("_"," ")}${o.batch_size>1?" \u00b7 batched":""}</span>
+     <span class="amt">${n(o.total,2)}</span></div>`).join(""):
+    '<div class="empty">waiting for orders…</div>';
+}
+
+async function pipe(){
+  const d=await (await fetch("/api/pipeline")).json();
+  if(d.error) return;
+  $("ptopics").textContent=d.topics.map(t=>t.partitions).reduce((a,b)=>a+b,0)+" partitions";
+  $("pbroker").textContent=d.topics.map(t=>t.name).join(" · ")||d.broker_error||"—";
+  $("prows").textContent=n(d.postgres_rows);
+  $("pcomplete").textContent=n(d.complete_rows);
+  $("pkeys").textContent=n(d.redis_keys);
+  const s=d.sample_order;
+  $("chain").innerHTML=s?
+    [["placed",s.placed],["accepted",s.accepted],["ready",s.ready],
+     ["picked up",s.picked_up],["delivered",s.delivered]]
+      .map(([k,v])=>`<span>${k} <b>${v||"—"}</b></span>`)
+      .join('<span class="arrow">→</span>'):'<span class="empty">waiting…</span>';
+  $("pdrivers").innerHTML=(d.drivers||[]).map(x=>
+    `<tr><td class="k">${x.driver}</td><td>${x.lat}</td><td>${x.lng}</td><td>${x.ts}</td></tr>`).join("");
+}
+
+async function ai(){
+  const d=await (await fetch("/api/intelligence")).json();
+  if(d.error) return;
+  if(d.time_compression) TC=d.time_compression;
+  $("aobs").textContent=n(d.observations);
+  $("arest").textContent=d.restaurants_modelled;
+  $("apairs").textContent=d.pairs.length;
+
+  const acc=d.accuracy||{};
+  $("amae").textContent=acc.ready?"\u00b1"+rw(acc.mae):"learning";
+  $("awithin").textContent=acc.ready?pct(acc.within_5min):"\u2014";
+
+  $("apred").innerHTML=d.predictions.length?d.predictions.slice(0,10).map(p=>{
+    if(!p.known) return `<tr><td class="k">${p.order_id}</td><td>${p.restaurant_id}</td>
+      <td>${rw(p.elapsed)}</td><td colspan="4" class="empty">learning this kitchen</td></tr>`;
+    const conf=p.confidence==null?"overdue":pct(p.confidence);
+    const cls=p.confidence>0.6?"doneink":"brandink";
+    const eta=rwr(p.eta_p50,p.eta_p90);
+    const bat=p.batchable?'<span class="brandink">yes</span>':'<span style="color:var(--ink-faint)">\u2014</span>';
+    return `<tr><td class="k">${p.order_id}</td><td>${p.restaurant_id}</td>
+      <td>${rw(p.elapsed)}</td>
+      <td class="k">${rwr(p.ready_p50,p.ready_p90)}</td>
+      <td class="${cls}">${conf}</td>
+      <td class="k">${eta}</td><td>${bat}</td></tr>`;
+  }).join(""):'<tr><td colspan="7" class="empty">no orders in the kitchen right now</td></tr>';
+
+  const prof=Object.entries(d.profiles).filter(([,v])=>v.ready)
+    .sort((a,b)=>a[1].variability-b[1].variability);
+  $("aprof").innerHTML=prof.length?prof.map(([k,v])=>
+    `<tr><td class="k">${k}</td><td>${rw(v.p50)}</td>
+     <td class="${v.variability<0.25?"doneink":"brandink"}">${(v.variability*100).toFixed(0)}%</td></tr>`).join(""):
+    '<tr><td colspan="3" class="empty">gathering history\u2026</td></tr>';
+
+  $("apairtbl").innerHTML=d.pairs.length?d.pairs.slice(0,6).map(p=>
+    `<tr><td class="k">${p.order_a}</td><td class="k">${p.order_b}</td>
+     <td>${p.restaurant_id}</td><td>${p.zone}</td>
+     <td>${rw(p.gap_seconds)}</td>
+     <td class="doneink">${pct(p.confidence)}</td></tr>`).join(""):
+    '<tr><td colspan="6" class="empty">no overlapping pairs at this moment</td></tr>';
+}
+
+function tick(){ (view==="ops"?ops:view==="pipe"?pipe:ai)().catch(()=>{}); }
+tick(); setInterval(tick,2000);
+</script>
+</body>
+</html>
